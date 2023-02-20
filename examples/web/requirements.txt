@@ -1,0 +1,13 @@
+# pytest==4.4.0
+# pytest                   # pytest framwork
+# pytest-html              # html test report
+# allure-pytest            # allure test report
+# Appium-Python-Client   # appium test framwork
+# ConfigParser           # read and write config file
+# pyyaml
+# pytest-sugar            # make test progress beautiful
+# pytest-rerunfailures    # rerun fail test cases
+# pytest-ordering         # order test cases
+# opencv-python           # cv2
+requests
+colorlog                # make console log colorfully

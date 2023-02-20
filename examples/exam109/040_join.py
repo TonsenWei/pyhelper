@@ -1,0 +1,12 @@
+#join()括号里面的是可迭代对象，x插入可迭代对象中间，形成字符串，结果一致
+x="abc"
+y="def"
+z=["d","e","f"]
+a=x.join(y)
+b=x.join(z)
+print(a)
+print(b)
+"""
+均输出:
+dabceabcf
+"""
