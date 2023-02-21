@@ -6,3 +6,4 @@ L.sort()是对原始的L进行操作，调用后原始的L会改变，没有返�
 sorted()适用于任何可迭代容器，list.sort()仅支持list（本身就是list的一个方法）
 基于以上两点，sorted使用频率比list.sort()更高些，所以Python中更高级的排序技巧便通过sorted()来演示。}
 """
+

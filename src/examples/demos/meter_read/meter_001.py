@@ -23,6 +23,7 @@ methods = ['cv2.TM_CCOEFF', 'cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR',
            'cv2.TM_CCORR_NORMED', 'cv2.TM_SQDIFF', 'cv2.TM_SQDIFF_NORMED']
 method = cv2.TM_CCOEFF
 
+
 def isinpolygon(point, vertex_lst: list, contain_boundary=True):
     # 检测点是否位于区域外接矩形内
     lngaxis, lataxis = zip(*vertex_lst)
@@ -80,6 +81,7 @@ def isin_multipolygon(poi, vertex_lst, contain_boundary=True):
         elif intersect:
             sinsc += 1
     return sinsc % 2 == 1
+
 
 def get_match_rect(template, img, method):
     '''获取模板匹配的矩形的左上角和右下角的坐标'''
@@ -268,10 +270,13 @@ def get_meter_value_bak(img, center, pointZero, pointMax, pointTarget, maxValue)
     for i in range(361):
         x = (x1 - c_x) * cos(i * pi / 180) + c_x
         y = (x1 - c_x) * sin(i * pi / 180) + c_y
+        xThen = (x1 - c_x) * cos((i + 2) * pi / 180) + c_x
+        yThen = (x1 - c_x) * sin((i + 2) * pi / 180) + c_y
         # print(f"角度={i}, 圆心({c_x}, {c_y}), 线的点({x}, {y})")
         temp = src.copy()
         offset = 3
-        lineRect = [[int(c_x), int(c_y)], [int(x), int(y)], [int(c_x+offset), int(c_y+offset)],  [int(x+offset), int(y+offset)]]
+        # lineRect = [[int(c_x), int(c_y)], [int(x), int(y)], [int(c_x+offset), int(c_y+offset)],  [int(x+offset), int(y+offset)]]
+        lineRect = [[int(c_x), int(c_y)], [int(x), int(y)], [int(c_x), int(c_y)], [int(xThen), int(yThen)]]
         res = isin_multipolygon(pointZero, copy.deepcopy(lineRect), contain_boundary=True)
         resMax = isin_multipolygon(pointMax, copy.deepcopy(lineRect), contain_boundary=True)
         resTarget = isin_multipolygon(pointTarget, copy.deepcopy(lineRect), contain_boundary=True)
@@ -330,7 +335,7 @@ def get_meter_value_bak(img, center, pointZero, pointMax, pointTarget, maxValue)
     return rad
 
 
-def get_meter_value(center, pointZero, pointMax, pointTarget, maxValue):
+def get_meter_value(center, pointZero, pointMax, pointTarget, maxValue, img):
     """
     获取某点对应的数值
     :param center: 中心点
@@ -349,29 +354,92 @@ def get_meter_value(center, pointZero, pointMax, pointTarget, maxValue):
     zeroFound = False
     targetFound = False
     maxFound = False
-    x1 = c_x + c_x * 0.8
+    # x1 = c_x + c_x * 0.8
+    x1 = c_x + c_x
     targetValue = 0
+
+    res = False
+    resMax = False
+    resTarget = False
     for i in range(361):
         x = (x1 - c_x) * cos(i * pi / 180) + c_x
         y = (x1 - c_x) * sin(i * pi / 180) + c_y
+        xThen = (x1 - c_x) * cos((i + 1) * pi / 180) + c_x
+        yThen = (x1 - c_x) * sin((i + 1) * pi / 180) + c_y
         # print(f"角度={i}, 圆心({c_x}, {c_y}), 线的点({x}, {y})")
-        offset = 3
-        lineRect = [[int(c_x), int(c_y)], [int(x), int(y)], [int(c_x+offset), int(c_y+offset)],  [int(x+offset), int(y+offset)]]
-        res = isin_multipolygon(pointZero, copy.deepcopy(lineRect), contain_boundary=True)
-        resMax = isin_multipolygon(pointMax, copy.deepcopy(lineRect), contain_boundary=True)
-        resTarget = isin_multipolygon(pointTarget, copy.deepcopy(lineRect), contain_boundary=True)
+        offset = 2
+        temp = img.copy()
+        # lineRect = [[int(c_x), int(c_y)], [int(x), int(y)]]
+        lineRect = [[int(c_x), int(c_y)], [int(x), int(y)], [int(c_x), int(c_y)], [int(xThen), int(yThen)]]
+        # lineRect = [[int(c_x), int(c_y)], [int(x), int(y)], [int(c_x+offset), int(c_y+offset)],  [int(x+offset), int(y+offset)]]
+        cv2.line(temp, (c_x, c_y), (int(x), int(y)), (0, 0, 255), thickness=3)  # 画线
+        # 判断点在多边形上
+        pts = np.array([[c_x, c_y], [x, y], [xThen, yThen], [c_x, c_y]], np.int32)  # 数据类型必须为 int32
+        # pts = np.array([[c_x, c_y], [x, y], [x, y], [c_x, c_y]], np.int32)  # 数据类型必须为 int32
+        pts = pts.reshape((-1, 1, 2))
+        result = cv2.pointPolygonTest(pts, (c_x, c_y), True)
+        print(f"result={result}")
+
+        # 设置为true时，返回实际距离值。若返回值为正，表示点在多边形内部，返回值为负，表示在多边形外部，返回值为0，表示在多边形上。
+        retZero = cv2.pointPolygonTest(pts, (pointZero[0], pointZero[1]),
+                                       False)  # 返回 -1、0、1三个固定值。若返回值为+1，表示点在多边形内部，返回值为-1，表示在多边形外部，返回值为0，表示在多边形上。
+        retMax = cv2.pointPolygonTest(pts, (pointMax[0], pointMax[1]), False)
+        retTarget = cv2.pointPolygonTest(pts, (targetPoint[0], targetPoint[1]), False)
+        if retZero >= 0:
+            res = True
+        if retMax >= 0:
+            resMax = True
+        if retTarget >= 0:
+            resTarget = True
+        # pts = np.array([[c_x, c_y], [x, y], [xThen + 5, yThen + 5], [c_x, c_y]], np.int32)  # 数据类型必须为 int32
+        # pts = pts.reshape((-1, 1, 2))
+        # cv2.polylines(temp, [pts], isClosed=True, color=(0, 0, 255), thickness=1)
+        cv2.imshow('d', temp)
+        # res = isin_multipolygon(pointZero, copy.deepcopy(lineRect), contain_boundary=True)
+        # resMax = isin_multipolygon(pointMax, copy.deepcopy(lineRect), contain_boundary=True)
+        # # print(f"pointTarget= {pointTarget}")
+        # resTarget = isin_multipolygon(pointTarget, copy.deepcopy(lineRect), contain_boundary=True)
         if res is True and zeroFound is False:
             zeroFound = True
             degreeZeroValue = i
             print(f"0值的角度={i}, 圆心({c_x}, {c_y}), 线的点({x}, {y}), degreeZeroValue={degreeZeroValue}")
+            print(f"0值坐标：{pointZero}")
+            cv2.drawContours(temp, [pts], -1, (0, 255, 0), -1)  # 画轮廓
+            cv2.imshow('drawContours', temp)
+            cv2.waitKey(0)
         if resMax is True and maxFound is False:
             maxFound = True
             degreeMaxValue = i
             print(f"最大值的角度={i}, 圆心({c_x}, {c_y}), 线的点({x}, {y}), degreeMaxValue={degreeMaxValue}")
+            print(f"最大值坐标：{pointMax}")
+
+            # pts = np.array([[c_x, c_y], [x, y], [xThen + 5, yThen + 5], [c_x, c_y]], np.int32)  # 数据类型必须为 int32
+            # pts = pts.reshape((-1, 1, 2))
+            # 降噪
+            # ret, thresh = cv2.threshold(gray_img, 127, 255, 0)
+            # 寻找轮廓
+            # contours, hierarchy = cv2.findContours(gray_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            # print(len(contours[0]))
+            # print(f"contours[0] = {contours[0]}")
+            # print(f"contours[1] = {contours[1]}")
+            # print(f"contours[2] = {contours[2]}")
+            # print(f"contours[3] = {contours[3]}")
+            # print(f"contours[0][0]={contours[0][0]}, type={type(contours[0][0])}")
+            # print(f"contours[0][0][0]={contours[0][0][0][0]}")
+            # 绘制绿色轮廓
+            # gray_img = cv2.cvtColor(temp, cv2.COLOR_BGR2GRAY)
+            cv2.drawContours(temp, [pts], -1, (0, 255, 0), -1)  # 画轮廓
+            cv2.imshow('drawContours', temp)
+            cv2.waitKey(0)
         if resTarget is True and targetFound is False:
             targetFound = True
             degreeTargetValue = i
             print(f"目标值的角度={i}, 圆心({c_x}, {c_y}), 线的点({x}, {y}), degreeTargetValue={degreeTargetValue}")
+            print(f"目标值坐标：{pointTarget}")
+            cv2.drawContours(temp, [pts], -1, (0, 255, 0), -1)  # 画轮廓
+            cv2.imshow('drawContours', temp)
+            cv2.waitKey(0)
+    cv2.destroyAllWindows()
     print(f"0值角度={degreeZeroValue}, 最大值角度={degreeMaxValue}, 目标值角度={degreeTargetValue}")
     # 一般情况，degreeMaxValue < degreeZeroValue < degreeTargetValue
     if degreeMaxValue < degreeZeroValue < degreeTargetValue:
@@ -391,6 +459,9 @@ def get_meter_value(center, pointZero, pointMax, pointTarget, maxValue):
         realTargetDegree = valueDegrees - leftDegree  # 目标刻度总角度
         perDegreeValue = maxValue / valueDegrees  # 每个角度占的值
         targetValue = realTargetDegree * perDegreeValue  # 目标角度对应的值
+    elif degreeMaxValue < degreeTargetValue < degreeZeroValue:
+        # 先找到最大值，再到目标值，再到0值，说明可能因为误差原因，目标在0值之前，直接置0
+        targetValue = 0
     elif degreeTargetValue == degreeZeroValue:
         targetValue = 0
     elif degreeTargetValue == degreeTargetValue:
@@ -447,6 +518,7 @@ def cross_point(line1, line2):  # 计算交点函数
             x = (b2 - b1) * 1.0 / (k1 - k2)
             y = k1 * x * 1.0 + b1 * 1.0
     return [x, y]
+
 
 def line_detect(imagePath, center):
     """
@@ -505,8 +577,8 @@ def line_detect(imagePath, center):
             print(f"point = {targetPoint}")
         elif len(lines) == 1:
             line1x1, line1y1, line1x2, line1y2 = lines[0][0]
-            disP1 = math.sqrt(pow(center[0]-line1x1, 2) + pow(center[1]-line1y1, 2))
-            disP2 = math.sqrt(pow(center[0]-line1x2, 2) + pow(center[1]-line1y2, 2))
+            disP1 = math.sqrt(pow(center[0] - line1x1, 2) + pow(center[1] - line1y1, 2))
+            disP2 = math.sqrt(pow(center[0] - line1x2, 2) + pow(center[1] - line1y2, 2))
             print(f"disP1 = {disP1}, disP2={disP2}")
             if disP1 >= disP2:
                 targetPoint = [line1x1, line1y1]
@@ -554,7 +626,8 @@ def line_detect(imagePath, center):
     ax[1, 0].set_title("image edge")
     ax[1, 1].set_title("image line")
     plt.show()
-    return targetPoint
+    return targetPoint, image_copy
+
 
 if __name__ == '__main__':
     # 获取测试图像
@@ -603,42 +676,32 @@ if __name__ == '__main__':
     # # pointTarget = [406, 153]  # 80
     # pointTarget = [522, 243]  # 80
 
-    # imagePath = r"D:\projects\python\pylearning\files\pics\meter\002_tmp_ori.png"
-    # imagePath = r"D:\projects\python\pylearning\files\pics\meter\ico_0c.png"
-    imagePath = r"D:\projects\python\pylearning\files\pics\meter\ico_38c.png"
-
-    # # ico_0c
-    # center = [462, 454]  # 80
-    # pointZero = [149, 627]
-    # pointMax = [700, 598]
-    # # pointTarget = [291, 142]  # 39
-    # # pointTarget = [471, 101]  # 50
-    # # pointTarget = [805, 459]  # 88
+    # imagePath = r"D:\projects\python\pylearning\files\pics\meter\ico_38c.png"  # 38
+    # center = [313, 301]  # 80
+    # targetPoint, img = line_detect(imagePath, center)
+    # pointZero = [106, 420]
+    # pointMax = [520, 420]
+    # print(f"int(targetPoint[0]={int(targetPoint[0])}, targetPoint(int(targetPoint[1]))={int(targetPoint[1])}")
     # pointTarget = [int(targetPoint[0]), int(targetPoint[1])]  # 88
     # maxValue = 100
-    # get_meter_value(center, pointZero, pointMax, pointTarget, maxValue)
+    # get_meter_value(center, pointZero, pointMax, pointTarget, maxValue, img)
 
-    # ico_38c
-    center = [313, 301]  # 80
-    targetPoint = line_detect(imagePath, center)
-    pointZero = [145, 392]
-    pointMax = [505, 412]
-    # pointTarget = [291, 142]  # 39
-    # pointTarget = [471, 101]  # 50
-    # pointTarget = [805, 459]  # 88
+    imagePath = r"D:\projects\python\pylearning\files\pics\meter\ico_50c.png"  # 50
+    center = [303, 307]  # 80
+    targetPoint, img = line_detect(imagePath, center)
+    pointZero = [95, 425]
+    pointMax = [506, 425]
+    print(f"int(targetPoint[0]={int(targetPoint[0])}, targetPoint(int(targetPoint[1]))={int(targetPoint[1])}")
     pointTarget = [int(targetPoint[0]), int(targetPoint[1])]  # 88
     maxValue = 100
-    get_meter_value(center, pointZero, pointMax, pointTarget, maxValue)
+    get_meter_value(center, pointZero, pointMax, pointTarget, maxValue, img)
 
-    # center = [408, 408]  # 80
-    # pointZero = [213, 588]
-    # pointMax = [580, 598]
-    # pointTarget = [targetPoint[0], targetPoint[1]]  # 39
-    # # pointTarget = [291, 142]  # 39
-    # # pointTarget = [406, 153]  #
-    # # pointTarget = [628, 538]  # 150
-    # # pointTarget = [662, 404]  # 135
-    # # pointTarget = [675, 595]  # 160
-    # maxValue = 160
-    # # get_meter_value(img, center, pointZero, pointMax, pointTarget, maxValue)
-    # get_meter_value(center, pointZero, pointMax, pointTarget, maxValue)
+    # imagePath = r"D:\projects\python\pylearning\files\pics\meter\ico_0c.png"
+    # center = [466, 450]  # 80
+    # targetPoint, img = line_detect(imagePath, center)
+    # pointZero = [150, 625]
+    # pointMax = [756, 625]
+    # print(f"int(targetPoint[0]={int(targetPoint[0])}, targetPoint(int(targetPoint[1]))={int(targetPoint[1])}")
+    # pointTarget = [int(targetPoint[0]), int(targetPoint[1])]  # 88
+    # maxValue = 100
+    # get_meter_value(center, pointZero, pointMax, pointTarget, maxValue, img)
