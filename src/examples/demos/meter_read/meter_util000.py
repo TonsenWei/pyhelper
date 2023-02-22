@@ -5,47 +5,14 @@
 @File : meter_detect_util.py
 @Desc : 
 """
-import base64
 import math
 
 import cv2
 import numpy as np
 from math import cos, pi, sin
 
-from PySide2.QtCore import QSettings
+from src.myutils.airtest.core.cv import Template
 
-from src.myutils.airtest.core.cv import Template, TemplateCv2
-
-
-class ImgUtil:
-
-    @staticmethod
-    def cvImg2Base64(frame, fmt=".png"):
-        """
-        opencv图片转base64字符串
-        :param frame: opencv图片
-        :param fmt: 图片原格式
-        :return: base64图片字符串
-        """
-        image = cv2.imencode(fmt, frame)[1]
-        image_code = str(base64.b64encode(image))[2:-1]
-        return image_code
-
-    @staticmethod
-    def base64ToCvImg(base64_code):
-        """
-        base64图片字符串转opencv图片
-        :param base64_code: base64编码
-        :return: opencv图片
-        """
-        # base64解码
-        img_data = base64.b64decode(base64_code)
-        # 转换为np数组
-        # img_array = np.fromstring(img_data, np.uint8)  # is deprecated
-        img_array = np.frombuffer(img_data, np.uint8)
-        # 转换成opencv可用格式
-        img = cv2.imdecode(img_array, cv2.COLOR_RGB2BGR)
-        return img
 
 class MeterUtil:
 
@@ -113,21 +80,8 @@ class MeterUtil:
         """
         # 转换成灰度图
         height, width = image.shape[:2]  # 测试图片高度和宽度
-        # image = cv2.resize(image, (500, 500), interpolation=cv2.INTER_CUBIC)
-        scale = 1
-        centerX = center[0]
-        centerY = center[1]
-        widthMax = 600
-        if width > widthMax:  # 宽度大于400的图片，进行缩放
-            scale = widthMax/width
-            print(f"scale = {scale}")
-            height = (height*widthMax)/width
-            width = width*scale
-            image = cv2.resize(image, (widthMax, int(height)), interpolation=cv2.INTER_CUBIC)
-            centerX = center[0]*scale
-            centerY = center[1]*scale
-        cX = centerX
-        cY = centerY
+        cX = center[0]
+        cY = center[1]
         xLeft = width - cX  # 指针旋转点 到 右边的距离
         yLeft = height - cY  # 指针旋转点 到 底部的距离
         minValue = min([cX, cY, xLeft, yLeft])
@@ -162,29 +116,15 @@ class MeterUtil:
         # lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 100, minLineLength=100, maxLineGap=10)
         # lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 100, minLineLength=int(width/8), maxLineGap=10)
         # print(int(width/2))
-        # 这个系数适用大多数情况，不适用的可以使用 threshold=100，minLineLength=100， maxLineGap=10测试
-        threshold = int(width / 8)  # 8  #
-        minLineLength = int(width / 8)  # 8
-        maxLineGap = int(width / 80)  # 80 待处理宽度小于80时，线段之间的最大允许间隙，将它们视为一条线
-        # threshold = 100  # 测试用
-        # minLineLength = 100
-        # maxLineGap = 10
+        threshold = int(width / 8)
+        minLineLength = int(width / 8)
+        maxLineGap = int(width / 80)  # 待处理宽度小于80时，线段之间的最大允许间隙，将它们视为一条线
         print(f"threshold={threshold}, minLineLength={minLineLength}, maxLineGap={maxLineGap}")
         lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold, minLineLength=minLineLength, maxLineGap=maxLineGap)
+        # cv2.imshow("edges", edges)
         # 遍历
-        targetPoint = [0, 0]
+        targetPoint = []
         if lines is not None:
-            lineInPointer = []
-            for lIndex, line in enumerate(lines):
-                line1x1, line1y1, line1x2, line1y2 = line[0]
-                # 判断线段两个点到指针中心的距离，要至少有一个点在该距离内，否则判断为不是指针的线
-                disP1 = math.sqrt(pow(centerX - line1x1, 2) + pow(centerY - line1y1, 2))
-                disP2 = math.sqrt(pow(centerX - line1x2, 2) + pow(centerY - line1y2, 2))
-                minDistance = minValue*0.4
-                if disP1 <= minDistance or disP2 <= minDistance:
-                    lineInPointer.append(line)
-            lines = lineInPointer
-            cv2.imshow("edges", edges)
             print(f"lines len = {len(lines)}")
             if len(lines) >= 2:  # 找到的线大于等于两条
                 lineRet = []
@@ -193,59 +133,50 @@ class MeterUtil:
                     lDis = math.sqrt(pow(line1x2 - line1x1, 2) + pow(line1y2 - line1y1, 2))  # 计算线段长度
                     lineRet.append([lIndex, lDis, line])
                 lineRet.sort(key=lambda x: x[1], reverse=True)  # 按线段长度排序
-                # lines = [lineRet[0][2], lineRet[1][2]]
+                # for line in lineRet:
+                #     print(f"lineIndex={line[0]}, lineDis = {line[1]}")
+                lines = [lineRet[0][2], lineRet[1][2]]
                 line1x1, line1y1, line1x2, line1y2 = lineRet[0][2][0]
                 line2x1, line2y1, line2x2, line2y2 = lineRet[1][2][0]
                 line1 = [line1x1, line1y1, line1x2, line1y2]
                 line2 = [line2x1, line2y1, line2x2, line2y2]
                 targetPoint = MeterUtil.cross_point(line1, line2)  # 计算延长线交点
-                print(f"targetPoint line > = 2: {targetPoint}")
-                if targetPoint is not None:
-                    centerToTarDis = math.sqrt(pow(centerX - targetPoint[0], 2) + pow(centerY - targetPoint[1], 2))
-                    print(f"centerToTarDis={centerToTarDis}")
-                    if targetPoint[0] < 0 or targetPoint[1] < 0 or centerToTarDis > (minValue*0.8):  # 交点为负值或太远
-                        centerToTarScale = rValue / centerToTarDis
-                        if targetPoint[0] > centerX and targetPoint[1] < centerY:  # 第一象限
-                            xOffset = ((targetPoint[0] - centerX) * centerToTarScale)
-                            yOffset = ((centerY - targetPoint[1]) * centerToTarScale)
-                            targetPoint[0] = centerX + xOffset
-                            targetPoint[1] = targetPoint[1] + (centerY - targetPoint[1] - yOffset)
-                            print(f"第一象限：（{targetPoint[0]}， {targetPoint[1]}）")
-                        elif targetPoint[0] < centerX and targetPoint[1] < centerY:  # 第二象限
-                            xOffset = ((centerX - targetPoint[0]) * centerToTarScale)
-                            yOffset = ((centerY - targetPoint[1]) * centerToTarScale)
-                            targetPoint[0] = targetPoint[0] + (centerX - targetPoint[0] - xOffset)
-                            targetPoint[1] = targetPoint[1] + (centerY - targetPoint[1] - yOffset)
-                            print(f"第二象限：（{targetPoint[0]}， {targetPoint[1]}）")
-                        elif targetPoint[0] < centerX and targetPoint[1] > centerY:  # 第三象限
-                            xOffset = ((centerX - targetPoint[0]) * centerToTarScale)
-                            yOffset = ((targetPoint[1] - centerY) * centerToTarScale)
-                            targetPoint[0] = centerX - xOffset
-                            targetPoint[1] = centerY + yOffset
-                            print(f"第三象限：（{targetPoint[0]}， {targetPoint[1]}）")
-                        elif targetPoint[0] > centerX and targetPoint[1] > center[1]:  # 第四象限
-                            xOffset = ((targetPoint[0] - centerX) * centerToTarScale)
-                            yOffset = ((targetPoint[1] - centerY) * centerToTarScale)
-                            targetPoint[0] = centerX + xOffset
-                            targetPoint[1] = centerY + yOffset
-                            print(f"第四象限：（{targetPoint[0]}， {targetPoint[1]}）")
-                        else:
-                            print("无象限")
+                centerToTarDis = math.sqrt(pow(center[0] - targetPoint[0], 2) + pow(center[1] - targetPoint[1], 2))
+                print(f"centerToTarDis={centerToTarDis}")
+                if targetPoint[0] < 0 or targetPoint[1] < 0 or centerToTarDis > (minValue*0.8):  # 交点为负值或太远
+                    centerToTarScale = rValue / centerToTarDis
+                    if targetPoint[0] > center[0] and targetPoint[1] < center[1]:  # 第一象限
+                        xOffset = ((targetPoint[0] - center[0]) * centerToTarScale)
+                        yOffset = ((center[1] - targetPoint[1]) * centerToTarScale)
+                        targetPoint[0] = center[0] + xOffset
+                        targetPoint[1] = targetPoint[1] + (center[1] - targetPoint[1] - yOffset)
+                        print(f"第一象限：（{targetPoint[0]}， {targetPoint[1]}）")
+                    elif targetPoint[0] < center[0] and targetPoint[1] < center[1]:  # 第二象限
+                        xOffset = ((center[0] - targetPoint[0]) * centerToTarScale)
+                        yOffset = ((center[1] - targetPoint[1]) * centerToTarScale)
+                        targetPoint[0] = targetPoint[0] + (center[0] - targetPoint[0] - xOffset)
+                        targetPoint[1] = targetPoint[1] + (center[1] - targetPoint[1] - yOffset)
+                        print(f"第二象限：（{targetPoint[0]}， {targetPoint[1]}）")
+                    elif targetPoint[0] < center[0] and targetPoint[1] > center[1]:  # 第三象限
+                        xOffset = ((center[0] - targetPoint[0]) * centerToTarScale)
+                        yOffset = ((targetPoint[1] - center[1]) * centerToTarScale)
+                        targetPoint[0] = center[0] - xOffset
+                        targetPoint[1] = center[1] + yOffset
+                        print(f"第三象限：（{targetPoint[0]}， {targetPoint[1]}）")
+                    elif targetPoint[0] > center[0] and targetPoint[1] > center[1]:  # 第四象限
+                        xOffset = ((targetPoint[0] - center[0]) * centerToTarScale)
+                        yOffset = ((targetPoint[1] - center[1]) * centerToTarScale)
+                        targetPoint[0] = center[0] + xOffset
+                        targetPoint[1] = center[1] + yOffset
+                        print(f"第四象限：（{targetPoint[0]}， {targetPoint[1]}）")
                     else:
-                        print(f"centerToTarDis={centerToTarDis}, minValue*0.8={minValue*0.8}")
+                        print("无象限")
                 else:
-                    line1x1, line1y1, line1x2, line1y2 = lines[0][0]
-                    disP1 = math.sqrt(pow(centerX - line1x1, 2) + pow(centerY - line1y1, 2))
-                    disP2 = math.sqrt(pow(centerX - line1x2, 2) + pow(centerY - line1y2, 2))
-                    if disP1 >= disP2:
-                        targetPoint = [line1x1, line1y1]
-                    else:
-                        targetPoint = [line1x2, line1y2]
-                    print(f"targetPoint is none get again: {targetPoint}")
+                    print(f"centerToTarDis={centerToTarDis}, minValue*0.8={minValue*0.8}")
             elif len(lines) == 1:
                 line1x1, line1y1, line1x2, line1y2 = lines[0][0]
-                disP1 = math.sqrt(pow(centerX - line1x1, 2) + pow(centerY - line1y1, 2))
-                disP2 = math.sqrt(pow(centerX - line1x2, 2) + pow(centerY - line1y2, 2))
+                disP1 = math.sqrt(pow(center[0] - line1x1, 2) + pow(center[1] - line1y1, 2))
+                disP2 = math.sqrt(pow(center[0] - line1x2, 2) + pow(center[1] - line1y2, 2))
                 if disP1 >= disP2:
                     targetPoint = [line1x1, line1y1]
                 else:
@@ -254,13 +185,13 @@ class MeterUtil:
                 # 获取坐标
                 x1, y1, x2, y2 = line[0]
                 cv2.line(image, (x1, y1), (x2, y2), (0, 0, 255), thickness=3)
-                cv2.putText(image, str(i), (x2, y2), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                cv2.putText(image, str(i), (x2, y2), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 1)
         if len(targetPoint) == 2:
             cv2.circle(image, (int(targetPoint[0]), int(targetPoint[1])), 3, (0, 255, 0), -1)
         # cv2.imshow("lines", image)
         # cv2.waitKey(0)
         print(f"targetPoint={targetPoint}")
-        return [int(targetPoint[0]), int(targetPoint[1])], image, scale
+        return [int(targetPoint[0]), int(targetPoint[1])], image
 
     @staticmethod
     def get_meter_value(center, pointZero, pointMax, pointTarget, maxValue):
@@ -356,22 +287,13 @@ class MeterUtil:
         return targetValue
 
     @staticmethod
-    def readValueFormFrame(frame, centerPos, zeroPos, maxPox, meterMaxValue):
+    def readMeterFormFrame(frame, centerPos, zeroPos, maxPox, meterMaxValue):
         imageTmp = frame.copy()
-        poiPoint, posImg, scale = MeterUtil.get_point_pos(imageTmp, centerPos)  # 获取指针指尖点
-        centerX = centerPos[0]*scale
-        centerY = centerPos[1]*scale
-        newCenter = (centerX, centerY)
-        zeroX = zeroPos[0]*scale
-        zeroY = zeroPos[1]*scale
-        newZero = (zeroX, zeroY)
-        maxX = maxPox[0]*scale
-        maxY = maxPox[1]*scale
-        newMax = (maxX, maxY)
-        cv2.circle(posImg, (int(centerX), int(centerY)), 3, (127, 255, 255), -1)
-        cv2.circle(posImg, (int(zeroX), int(zeroY)), 3, (255, 0, 0), -1)
-        cv2.circle(posImg, (int(maxX), int(maxY)), 3, (255, 255, 85), -1)
-        return MeterUtil.get_meter_value(newCenter, newZero, newMax, poiPoint, meterMaxValue), posImg
+        poiPoint, posImg = MeterUtil.get_point_pos(imageTmp, centerPos)  # 获取指针指尖点
+        cv2.circle(posImg, (int(centerPos[0]), int(centerPos[1])), 3, (255, 0, 0), -1)
+        cv2.circle(posImg, (int(zeroPos[0]), int(zeroPos[1])), 3, (255, 0, 0), -1)
+        cv2.circle(posImg, (int(maxPox[0]), int(maxPox[1])), 3, (255, 0, 0), -1)
+        return MeterUtil.get_meter_value(centerPos, zeroPos, maxPox, poiPoint, meterMaxValue), posImg
 
     @staticmethod
     def demo001():
@@ -382,7 +304,7 @@ class MeterUtil:
         pointZero = [95, 425]  # 0值指针坐标
         pointMax = [506, 425]  # 最大值指针坐标
         maxValue = 100  # 刻度值最大值
-        MeterUtil.readValueFormFrame(image, center, pointZero, pointMax, maxValue)
+        MeterUtil.readMeterFormFrame(image, center, pointZero, pointMax, maxValue)
 
     @staticmethod
     def demo002():
@@ -409,11 +331,11 @@ class MeterUtil:
             testFrame = copyTestFram[startY:endY, startX:endX]
             cv2.imshow('testFrame', testFrame)
             height, width = testFrame.shape[:2]  # 测试图片高度和宽度
-            print(f"测试图片width={width}, height={height}")
+            print(f"测试图片width={width}, height{height}")
 
             image = cv2.imread(imagePath)
             tmpHeight, tmpWidht = image.shape[:2]  # 模板图片高度和宽度
-            print(f"模板图片width={tmpWidht}, height={tmpHeight}")
+            print(f"模板图片width={tmpWidht}, height{tmpHeight}")
             # 模板图片信息：
             center = [298, 298]  # 指针旋转中心点
             pointZero = [92, 415]  # 0值指针坐标
@@ -430,8 +352,7 @@ class MeterUtil:
             # testCenter = [xCenter, yCenter]
             # xZero = (width * center[0]) / tmpWidht
             # yZero = (width * center[0]) / tmpWidht
-            value, posImg = MeterUtil.readValueFormFrame(testFrame, testCenter, testZeroPos, testMaxPos, maxValue)
-            cv2.imshow("posImg", posImg)
+            MeterUtil.readMeterFormFrame(testFrame, testCenter, testZeroPos, testMaxPos, maxValue)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
@@ -481,8 +402,7 @@ class MeterUtil:
             # testCenter = [xCenter, yCenter]
             # xZero = (width * center[0]) / tmpWidht
             # yZero = (width * center[0]) / tmpWidht
-            value, posImg = MeterUtil.readValueFormFrame(testFrame, testCenter, testZeroPos, testMaxPos, maxValue)
-            cv2.imshow("posImg", posImg)
+            MeterUtil.readMeterFormFrame(testFrame, testCenter, testZeroPos, testMaxPos, maxValue)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
@@ -490,9 +410,9 @@ class MeterUtil:
     def demo004():
         # 读数测试
         imagePath = r"D:\projects\python\pylearning\files\pics\meter\003_press_meter_tmp_small.png"  # 50
-        # imageTestPath = r"D:\projects\python\pylearning\files\pics\meter\003_press_meter1.jpg"  # 50
+        imageTestPath = r"D:\projects\python\pylearning\files\pics\meter\003_press_meter1.jpg"  # 50
         imageTestPath = r"D:\projects\python\pylearning\files\pics\meter\003_press_meter2.jpg"  # 50
-        # imageTestPath = r"D:\projects\python\pylearning\files\pics\meter\003_press_meter_tmp_small.png"  # 50
+        imageTestPath = r"D:\projects\python\pylearning\files\pics\meter\003_press_meter_tmp_small.png"  # 50
         tmp = Template(imagePath)
         png_frame = cv2.imdecode(np.fromfile(imageTestPath, dtype=np.uint8), cv2.IMREAD_COLOR)
         cv2.imshow('OriPic', png_frame)
@@ -533,8 +453,7 @@ class MeterUtil:
             # testCenter = [xCenter, yCenter]
             # xZero = (width * center[0]) / tmpWidht
             # yZero = (width * center[0]) / tmpWidht
-            value, posImg = MeterUtil.readValueFormFrame(testFrame, testCenter, testZeroPos, testMaxPos, maxValue)
-            cv2.imshow("posImg", posImg)
+            MeterUtil.readMeterFormFrame(testFrame, testCenter, testZeroPos, testMaxPos, maxValue)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
         else:
@@ -585,15 +504,14 @@ class MeterUtil:
             # testCenter = [xCenter, yCenter]
             # xZero = (width * center[0]) / tmpWidht
             # yZero = (width * center[0]) / tmpWidht
-            value, posImg = MeterUtil.readValueFormFrame(testFrame, testCenter, testZeroPos, testMaxPos, maxValue)
-            cv2.imshow("posImg", posImg)
-            cv2.waitKey(0)
+            MeterUtil.readMeterFormFrame(testFrame, testCenter, testZeroPos, testMaxPos, maxValue)
+            # cv2.waitKey(0)
             cv2.destroyAllWindows()
         else:
             print("not match")
 
     @staticmethod
-    def demo006_001_meter():
+    def demo006():
         # 读数测试
         imagePath = r"D:\projects\python\pylearning\files\pics\meter\001_meter.png"  # 50
         imageTestPath = r"D:\projects\python\pylearning\files\pics\meter\001_meter.png"  # 50
@@ -637,32 +555,11 @@ class MeterUtil:
             # testCenter = [xCenter, yCenter]
             # xZero = (width * center[0]) / tmpWidht
             # yZero = (width * center[0]) / tmpWidht
-            value, posImg = MeterUtil.readValueFormFrame(testFrame, testCenter, testZeroPos, testMaxPos, maxValue)
-            cv2.imshow("posImg", posImg)
+            MeterUtil.readMeterFormFrame(testFrame, testCenter, testZeroPos, testMaxPos, maxValue)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
         else:
             print("not match")
-
-    @staticmethod
-    def demo_013_meter():
-        # 读数测试
-        tmpPath = r"D:\projects\python\pylearning\files\pics\meter\013_meter.png"  # 50
-        imageTestPath = r"D:\projects\python\pylearning\files\pics\meter\013_meter.png"  # 50
-        testMeterframe = cv2.imdecode(np.fromfile(imageTestPath, dtype=np.uint8), cv2.IMREAD_COLOR)
-        # 模板图片信息：
-        center = (230, 255)  # 指针旋转中心点
-        pointZero = (102, 372)  # 0值指针坐标
-        pointMax = (353, 388)  # 最大值指针坐标
-        maxValue = 60000  # 刻度值最大值
-        meterValue, retImg = MeterUtil.readMeter(testMeterframe, tmpPath, center, pointZero, pointMax, maxValue)
-        if meterValue is not None:
-            print(f"meter read value is: {meterValue}")
-            cv2.imshow("ResultImage", retImg)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
-        else:
-            print("error, read meter failed!")
 
     @staticmethod
     def readMeter(testFrame, tmpMeterPicPath, centerPoint, zeroPoint, maxPoint, maxValue):
@@ -705,124 +602,30 @@ class MeterUtil:
             testCenter = [int(scale * centerPoint[0]), int(scale * centerPoint[1])]
             testZeroPos = [int(scale * zeroPoint[0]), int(scale * zeroPoint[1])]
             testMaxPos = [int(scale * maxPoint[0]), int(scale * maxPoint[1])]
-            value, image = MeterUtil.readValueFormFrame(testFrame, testCenter, testZeroPos, testMaxPos, maxValue)
+            value, image = MeterUtil.readMeterFormFrame(testFrame, testCenter, testZeroPos, testMaxPos, maxValue)
             return value, image
         else:
             print("not match")
             return value, image
-
-    @staticmethod
-    def readMeterFrame(testFrame, tmpMeterPicFrame, centerPoint, zeroPoint, maxPoint, maxValue):
-        """
-        仪表读数
-        :param testFrame: 待读取的仪表图片
-        :param tmpMeterPicFrame: 模板图片路径
-        :param centerPoint: 指针旋转中心点
-        :param zeroPoint: 0值刻度坐标
-        :param maxPoint: 最大值刻度坐标
-        :param maxValue: 数值最大值
-        :return: value：读数结果
-                image ： 读数过程分析结果图片
-        """
-        value, image = None, None
-        tmp = TemplateCv2(tmpMeterPicFrame)
-        match_ret = tmp.match_in_result(testFrame)
-        if match_ret is not None:
-            startX = match_ret["rectangle"][0][0]
-            startY = match_ret["rectangle"][0][1]
-            endX = match_ret["rectangle"][2][0]
-            endY = match_ret["rectangle"][2][1]
-            copyTestFram = testFrame.copy()
-            # cv2.rectangle(testFrame,
-            #               (startX, startY),  # 左上角坐标
-            #               (endX, endY),  # 右下角坐标
-            #               (0, 255, 0),  # 线颜色
-            #               2)  # 线粗细
-            print(match_ret)
-            testFrame = copyTestFram[startY:endY, startX:endX]
-            # cv2.imshow('testFrame', testFrame)
-            height, width = testFrame.shape[:2]  # 测试图片高度和宽度
-            print(f"测试图片width={width}, height{height}")
-
-            tmpHeight, tmpWidht = tmpMeterPicFrame.shape[:2]  # 模板图片高度和宽度
-            print(f"模板图片width={tmpWidht}, height{tmpHeight}")
-            # 测试图片信息
-            scale = height / tmpHeight
-            testCenter = [int(scale * centerPoint[0]), int(scale * centerPoint[1])]
-            testZeroPos = [int(scale * zeroPoint[0]), int(scale * zeroPoint[1])]
-            testMaxPos = [int(scale * maxPoint[0]), int(scale * maxPoint[1])]
-            value, image = MeterUtil.readValueFormFrame(testFrame, testCenter, testZeroPos, testMaxPos, maxValue)
-            return value, image
-        else:
-            print("not match")
-            return value, image
-
-    @staticmethod
-    def generateTemplate(tempPicPath, center, pointZero, pointMax, maxValue):
-        cvFrame = cv2.imdecode(np.fromfile(tempPicPath, dtype=np.uint8), cv2.IMREAD_COLOR)
-        templatePath = "meter_qt.ini"
-        METER_TEMPLATE = QSettings(templatePath, QSettings.IniFormat)  # 校准设置,如果替换ini文件，需要重新赋值一次才会更新
-        tempPic = "MeterTemplate/temp_pic"
-        tempCenterPos = "MeterTemplate/temp_center"
-        tempZeroPos = "MeterTemplate/temp_zero"
-        tempMaxPos = "MeterTemplate/temp_max_pox"
-        tempMaxValue = "MeterTemplate/temp_max_value"
-
-        METER_TEMPLATE.setValue(tempPic, ImgUtil.cvImg2Base64(cvFrame))  # 图片
-        METER_TEMPLATE.setValue(tempCenterPos, center)  # 中心点
-        METER_TEMPLATE.setValue(tempZeroPos, pointZero)  # 缩放比例
-        METER_TEMPLATE.setValue(tempMaxPos, pointMax)  # 画框时的宽度
-        METER_TEMPLATE.setValue(tempMaxValue, maxValue)  # 画框时的宽度
-
-    @staticmethod
-    def getTemplate():
-        templatePath = "meter_qt.ini"
-        METER_TEMPLATE = QSettings(templatePath, QSettings.IniFormat)  # 校准设置,如果替换ini文件，需要重新赋值一次才会更新
-        tempPic = "MeterTemplate/temp_pic"
-        tempCenterPos = "MeterTemplate/temp_center"
-        tempZeroPos = "MeterTemplate/temp_zero"
-        tempMaxPos = "MeterTemplate/temp_max_pox"
-        tempMaxValue = "MeterTemplate/temp_max_value"
-
-        tempPicBase64 = str(METER_TEMPLATE.value(tempPic))  # 图片
-        tempFrame = ImgUtil.base64ToCvImg(tempPicBase64)
-        getCenter = METER_TEMPLATE.value(tempCenterPos, None)  # 中心点
-        getZero = METER_TEMPLATE.value(tempZeroPos, None)  # 缩放比例
-        getMaxPos = METER_TEMPLATE.value(tempMaxPos, None)  # 画框时的宽度
-        getMaxValue = float(METER_TEMPLATE.value(tempMaxValue, None))  # 画框时的宽度
-        print(type(getCenter))
-        print(type(getZero))
-        print(type(getMaxPos))
-        print(type(getMaxValue))
-        return tempFrame, getCenter, getZero, getMaxPos, getMaxValue
-        # cv2.imshow("ResultImage", tempFrame)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
-    # MeterUtil.demo002()  # ico_38c_tmp  两种都OK
-    # MeterUtil.demo003()  # 识别了多个直线，待增加判断有多少条线经过圆心范围，然后求两条直线交点 002_tmp_ori， 两种都可以
-    # MeterUtil.demo004()  # 直线交点为负数，找不到目标指针 003_press_meter  计算ok
-    # MeterUtil.demo005()  # speed_meter_temp.png  两种都可以
-    MeterUtil.demo006_001_meter()  # 001_meter.png 两种都可以
-    # MeterUtil.demo_013_meter()
+    # MeterUtil.demo002()  # ico_38c_tmp
+    MeterUtil.demo003()  # 识别了多个直线，待增加判断有多少条线经过圆心范围，然后求两条直线交点 002_tmp_ori
+    # MeterUtil.demo004()  # 直线交点为负数，找不到目标指针 003_press_meter
+    # MeterUtil.demo005()  # speed_meter_temp.png
+    # MeterUtil.demo006()  # 001_meter.png
 
-    # 生成模板测试
-    # tempPath = r"D:\projects\python\pylearning\files\pics\meter\003_press_meter_tmp_small.png"  # 50
-    # center = (95, 93)  # 指针旋转中心点
-    # pointZero = (34, 134)  # 0值指针坐标
-    # pointMax = (150, 157)  # 最大值指针坐标
-    # maxValue = 0.6  # 刻度值最大值
-    # MeterUtil.generateTemplate(tempPath, center, pointZero, pointMax, maxValue)
-    # imageTestPath = r"D:\projects\python\pylearning\files\pics\meter\003_press_meter1.jpg"  # 50
-    # imageTestPath = r"D:\projects\python\pylearning\files\pics\meter\003_press_meter2.jpg"  # 50
-
-    # 读取模板测试
-    # imageTestPath = r"D:\projects\python\pylearning\files\pics\meter\003_press_meter_tmp_small.png"  # 50
+    # 读数测试
+    # tmpPath = r"D:\projects\python\pylearning\files\pics\meter\speed_meter_temp.png"  # 50
+    # imageTestPath = r"D:\projects\python\pylearning\files\pics\meter\speed_meter_real.jpg"  # 50
     # testMeterframe = cv2.imdecode(np.fromfile(imageTestPath, dtype=np.uint8), cv2.IMREAD_COLOR)
-    # tempFrame, getCenter, getZero, getMaxPos, getMaxValue = MeterUtil.getTemplate()
-    # meterValue, retImg = MeterUtil.readMeterFrame(testMeterframe, tempFrame, getCenter, getZero, getMaxPos, getMaxValue)
+    # # 模板图片信息：
+    # center = (170, 164)  # 指针旋转中心点
+    # pointZero = (68, 243)  # 0值指针坐标
+    # pointMax = (269, 251)  # 最大值指针坐标
+    # maxValue = 260  # 刻度值最大值
+    # meterValue, retImg = MeterUtil.readMeter(testMeterframe, tmpPath, center, pointZero, pointMax, maxValue)
     # if meterValue is not None:
     #     print(f"meter read value is: {meterValue}")
     #     cv2.imshow("ResultImage", retImg)
@@ -830,5 +633,3 @@ if __name__ == "__main__":
     #     cv2.destroyAllWindows()
     # else:
     #     print("error, read meter failed!")
-
-
