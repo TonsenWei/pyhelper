@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>meterSampleGui</class>
+ <widget class="QWidget" name="meterSampleGui">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>896</width>
+    <height>627</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>模板编辑</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2" rowstretch="1,1,1,1,1,100">
+      <item row="0" column="0" colspan="2">
+       <widget class="QLabel" name="lblGetTmpPic">
+        <property name="text">
+         <string>第一步:获取模板图</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0" colspan="2">
+       <widget class="QLabel" name="lblSetMaxValue">
+        <property name="text">
+         <string>第二步:设置刻度最大值</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0" colspan="5">
+       <widget class="QLabel" name="lblTips">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>第三步:依次点击仪表指针旋转的中心点、0刻度值坐标、最大值坐标</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="lblCurrentTodo">
+        <property name="text">
+         <string>当前需要操作:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1" colspan="2">
+       <widget class="QLabel" name="lblTodoTip">
+        <property name="text">
+         <string>点击仪表指针旋转的中心点</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="3">
+       <widget class="QPushButton" name="pushButton">
+        <property name="text">
+         <string>上一步</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="4">
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>568</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="lblSampleTip">
+        <property name="text">
+         <string>示例:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="3">
+       <widget class="QLabel" name="lblPleaseEdit">
+        <property name="text">
+         <string>请依次指针旋转点、0刻度、最大刻度:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2" colspan="2">
+       <widget class="QComboBox" name="comboBoxGetTmpPic"/>
+      </item>
+      <item row="1" column="2">
+       <widget class="QComboBox" name="comboBoxMaxValue">
+        <property name="editable">
+         <bool>true</bool>
+        </property>
+        <property name="currentText">
+         <string>100</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0" colspan="3">
+       <widget class="QLabel" name="lblSample">
+        <property name="text">
+         <string>lblSample</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="3" colspan="2">
+       <widget class="QLabel" name="lblResult">
+        <property name="text">
+         <string>lblResult</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
