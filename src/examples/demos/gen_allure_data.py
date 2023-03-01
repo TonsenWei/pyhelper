@@ -79,15 +79,8 @@ class TxtToAllureJson:
             return attachments
         attaValue = lineDict.setdefault(ATTA_VALUE, "")
         imgs = eval(attaValue.replace("\\", "\\\\"))
-        # attachment = {}
         for pngIndex, img in enumerate(imgs):
-            # pass
-            # copy_file_to_dir(png, dirPath)
             fpath, fname = os.path.split(img)
-            # imgNames.append(fname)
-            # attachment.setdefault("name", f"图片{pngIndex+1}")
-            # attachment.setdefault("source", f"{fname}")
-            # attachment.setdefault("type", "image/png")
             attachments.append(fname)
         return attachments
 
@@ -111,6 +104,8 @@ class TxtToAllureJson:
             resultJson.setdefault("name", caseName)
             resultJson.setdefault("status", status)
             statusDetails = {}
+            if status == "passed" or status == "pass":
+                message = "passed, clicked to show more"
             statusDetails.setdefault("message", message)
             statusDetails.setdefault("trace", trace)
             resultJson.setdefault("statusDetails", statusDetails)
@@ -139,15 +134,15 @@ class TxtToAllureJson:
             # labels.append(parentSuite)
             suite = {}
             suite.setdefault("name", "suite")
-            suite.setdefault("value", "AllTests")
+            suite.setdefault("value", taskName)
             labels.append(suite)
-            subSuite = {}
-            subSuite.setdefault("name", "subSuite")
-            subSuite.setdefault("value", taskName)
-            labels.append(subSuite)
+            # subSuite = {}
+            # subSuite.setdefault("name", "subSuite")
+            # subSuite.setdefault("value", taskName)
+            # labels.append(subSuite)
             package = {}
             package.setdefault("name", "package")
-            package.setdefault("value", "tests")
+            package.setdefault("value", taskName)
             # package.setdefault("value", "parentSuite.suite.tests")
             labels.append(package)
             hostname = socket.gethostname()
@@ -264,7 +259,6 @@ class TxtToAllureJson:
                                 attachment = TxtToAllureJson.getImgsNames(lineDict)
                                 attachments.extend(attachment)
                         elif currentType == SUMMARY:
-
                             TxtToAllureJson.genCaseJson(taskName, caseName, status, message, trace,
                                                         startInt, stopInt, attachments, dirPath)
                             attachments.clear()
