@@ -760,7 +760,7 @@ class MeterUtil:
     @staticmethod
     def generateTemplate(tempPicPath, center, pointZero, pointMax, maxValue):
         cvFrame = cv2.imdecode(np.fromfile(tempPicPath, dtype=np.uint8), cv2.IMREAD_COLOR)
-        templatePath = "meter_qt.ini"
+        templatePath = "qt_meter_temp.ini"
         METER_TEMPLATE = QSettings(templatePath, QSettings.IniFormat)  # 校准设置,如果替换ini文件，需要重新赋值一次才会更新
         tempPic = "MeterTemplate/temp_pic"
         tempCenterPos = "MeterTemplate/temp_center"
@@ -805,18 +805,16 @@ if __name__ == "__main__":
     # MeterUtil.demo003()  # 识别了多个直线，待增加判断有多少条线经过圆心范围，然后求两条直线交点 002_tmp_ori， 两种都可以
     # MeterUtil.demo004()  # 直线交点为负数，找不到目标指针 003_press_meter  计算ok
     # MeterUtil.demo005()  # speed_meter_temp.png  两种都可以
-    MeterUtil.demo006_001_meter()  # 001_meter.png 两种都可以
+    # MeterUtil.demo006_001_meter()  # 001_meter.png 两种都可以
     # MeterUtil.demo_013_meter()
 
     # 生成模板测试
-    # tempPath = r"D:\projects\python\pylearning\files\pics\meter\003_press_meter_tmp_small.png"  # 50
-    # center = (95, 93)  # 指针旋转中心点
-    # pointZero = (34, 134)  # 0值指针坐标
-    # pointMax = (150, 157)  # 最大值指针坐标
-    # maxValue = 0.6  # 刻度值最大值
-    # MeterUtil.generateTemplate(tempPath, center, pointZero, pointMax, maxValue)
-    # imageTestPath = r"D:\projects\python\pylearning\files\pics\meter\003_press_meter1.jpg"  # 50
-    # imageTestPath = r"D:\projects\python\pylearning\files\pics\meter\003_press_meter2.jpg"  # 50
+    tempPath = r"D:\projects\python\pylearning\files\pics\meter\qt_meter_temp.png"  # 50
+    center = (509, 502)  # 指针旋转中心点
+    pointZero = (179, 697)  # 0值指针坐标
+    pointMax = (841, 691)  # 最大值指针坐标
+    maxValue = 100  # 刻度值最大值
+    MeterUtil.generateTemplate(tempPath, center, pointZero, pointMax, maxValue)
 
     # 读取模板测试
     # imageTestPath = r"D:\projects\python\pylearning\files\pics\meter\003_press_meter_tmp_small.png"  # 50
