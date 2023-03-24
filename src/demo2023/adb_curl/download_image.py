@@ -50,21 +50,22 @@ class DownloadImage:
     def getImageFromAdbCurlDemo():
         """
         通过adb访问图片地址获取图片数据
+        可考虑使用subprocess.Popen()代替os.popen，从而可以控制，当阻塞时可以控制退出或进行其他操作。
         Returns:
-
         """
-        file = os.popen("adb shell curl -s \"https://www.baidu.com/img/PCtm_d9c8750bed0b3c7d089fa7d55720d6cf.png""\"")
-
-        rdata = file.buffer.read()  # 读取图片数据
-        # 不进行替换内容会有问题： error: (-215:Assertion failed) size.width>0 && size.height>0 in function 'cv::imshow'
-        data = rdata.replace(b"\r\n", b"\n")
-        frame = DownloadImage.data_to_cv2(data)  # error: (-215:Assertion failed) !buf.empty() in function 'cv::imdecode_'
-        # frame = WebCamUtil.data_to_cv2(rdata)
-        cv2.namedWindow("image")  # 创建一个image的窗口
-        # 显示图像，图片内容有问题时： error: (-215:Assertion failed) size.width>0 && size.height>0 in function 'cv::imshow'
-        cv2.imshow("image", frame)
-        cv2.waitKey()  # 默认为0，无限等待
-        cv2.destroyAllWindows()  # 释放所有窗口
+        cmdStr = "adb shell curl -s \"https://www.baidu.com/img/PCtm_d9c8750bed0b3c7d089fa7d55720d6cf.png""\""
+        with os.popen(cmdStr) as file:
+        # file = os.popen("adb shell curl -s \"https://www.baidu.com/img/PCtm_d9c8750bed0b3c7d089fa7d55720d6cf.png""\"")
+            rdata = file.buffer.read()  # 读取图片数据
+            # 不进行替换内容会有问题： error: (-215:Assertion failed) size.width>0 && size.height>0 in function 'cv::imshow'
+            data = rdata.replace(b"\r\n", b"\n")
+            frame = DownloadImage.data_to_cv2(data)  # error: (-215:Assertion failed) !buf.empty() in function 'cv::imdecode_'
+            # frame = WebCamUtil.data_to_cv2(rdata)
+            cv2.namedWindow("image")  # 创建一个image的窗口
+            # 显示图像，图片内容有问题时： error: (-215:Assertion failed) size.width>0 && size.height>0 in function 'cv::imshow'
+            cv2.imshow("image", frame)
+            cv2.waitKey()  # 默认为0，无限等待
+            cv2.destroyAllWindows()  # 释放所有窗口
 
 
 if __name__ == "__main__":
