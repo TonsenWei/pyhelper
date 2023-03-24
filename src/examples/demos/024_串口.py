@@ -3,7 +3,9 @@
 @Author : WeiDongcheng @tonse
 @Time : 2022/12/6 11:16
 @File : 024_串口.py
-@Desc : 
+@Desc :
+AttributeError: module 'serial' has no attribute 'Serial'
+pip install pyserial
 """
 import time
 
@@ -27,6 +29,11 @@ def write_ANSI_ASCII_test():
     com_serial.close()
 
 def writeFromFileTest():
+    """
+    从文件读取内容写入串口
+    Returns:
+
+    """
     logPath = r"E:\Tonsen\Downloads\logs\zhanghuanxin\2023-02-08_09-17-33_555_COM27.txt"
     com_serial = serial.Serial(port="COM2", baudrate=921600, bytesize=8, parity="N", stopbits=1)
     # start_time = time.time()

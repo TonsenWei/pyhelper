@@ -1,0 +1,32 @@
+一、仅连接单个继电器时
+1. 打开第一路继电器
+DefaultUSBRelay.exe open 01
+
+2. 打开前2路继电器
+DefaultUSBRelay.exe open 22
+
+3. 打开所有继电器
+DefaultUSBRelay.exe open 255
+
+4、关闭第一路继电器
+DefaultUSBRelay.exe close 01
+
+5、关闭前2路继电器
+DefaultUSBRelay.exe close 22
+
+6、关闭所有继电器
+DefaultUSBRelay.exe close 255
+
+
+二、连接多个继电器
+1. 打开序列号afEd5设备的第一路继电器
+CommandApp_USBRelay  afEd5 open 01
+
+2. 打开序列号afEd5设备的所有继电器
+CommandApp_USBRelay  afEd5 open 255
+
+3. 关闭序列号afEd5设备的第一路继电器
+CommandApp_USBRelay  afEd5 close 01
+
+4. 关闭序列号afEd5设备的所有继电器
+CommandApp_USBRelay  afEd5 close 255 
