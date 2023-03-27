@@ -246,9 +246,21 @@ mysql> show tables;
 6 rows in set (0.00 sec)
 ```
 
-#### 1.2.5 show columns from table
+#### 1.2.5 show columns from table / desc table
+desc 表示 description 也就是 对表的描述，这个命令会用一个表格描述一个数据表，而你的数据表的特征就是数据表的列名，所以用来描述的表格里面也会显示列名。
+show columns from table 就是一段最简单的直译命令，就是说显示表的所有列名，
+它们代表的含义是完全不同的，但是显示结果是相同的
 ```console
 mysql> show columns from orders;
++------------+----------+------+-----+---------+----------------+
+| Field      | Type     | Null | Key | Default | Extra          |
++------------+----------+------+-----+---------+----------------+
+| order_num  | int      | NO   | PRI | NULL    | auto_increment |
+| order_date | datetime | NO   |     | NULL    |                |
+| cust_id    | int      | NO   | MUL | NULL    |                |
++------------+----------+------+-----+---------+----------------+
+3 rows in set (0.01 sec)
+mysql> desc orders;
 +------------+----------+------+-----+---------+----------------+
 | Field      | Type     | Null | Key | Default | Extra          |
 +------------+----------+------+-----+---------+----------------+
@@ -276,6 +288,7 @@ select id,name,sex,age from tmp_table where name like "%dc%";
 select id,name,sex,age from tmp_table where name regexp ".000";
 select id,name,sex,age from tmp_table where name regexp "dc|sen";
 select Concat(name, "(", age, ")") as new_name,id from tmp_table order by name;
+select prod_id,prod_price,prod_name from products order by prod_price desc,prod_name;
 ```
 
 ```console
@@ -292,29 +305,106 @@ mysql> select * from orders order by cust_id asc;
 5 rows in set (0.00 sec)
 ```
 
+```console
+获取最高或最低：order by和limit组合
+//降序第一个就是最大值
+select prod_id,prod_price,prod_name from products order by prod_price desc limit 1;
+//升序第一个就是最小值
+select prod_id,prod_price,prod_name from products order by prod_price asc limit 1;   
+```
 
+```console
+select distinct cust_zip from customers;
+select distinct cust_name,cust_zip from customers;
+```
 
+### 1.4 insert 
 
+#### 1.4.1 Inset into 表名(字段1,字段2) values(值1,值2)
+```console+
+insert into customers(cust_name,cust_zip) value(“wdc”,111);
+insert into customers(cust_name,cust_zip) value("tonsen",111);
 
+mysql> select distinct cust_name,cust_zip from customers;  # 选择多个列时，去除重复仅在选择的列内容都相同时
++----------------+----------+
+| cust_name      | cust_zip |
++----------------+----------+
+| Coyote Inc.    | 44444    |
+| Mouse House    | 43333    |
+| Wascals        | 42222    |
+| Yosemite Place | 88888    |
+| E Fudd         | 54545    |
+| wdc            | 111      |
+| tonsen         | 111      |
++----------------+----------+
+7 rows in set (0.00 sec)
+```
 
+### 1.5 update
+```console
+insert into customers(cust_name,cust_zip) value("test",111);
+mysql> update customers set cust_name="test01" where cust_name="test" and cust_zip=111;
+Query OK, 1 row affected (0.01 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
 
+mysql> select distinct cust_name,cust_zip from customers;
++----------------+----------+
+| cust_name      | cust_zip |
++----------------+----------+
+| Coyote Inc.    | 44444    |
+| Mouse House    | 43333    |
+| Wascals        | 42222    |
+| Yosemite Place | 88888    |
+| E Fudd         | 54545    |
+| wdc            | 111      |
+| tonsen         | 111      |
+| test01         | 111      |
++----------------+----------+
+8 rows in set (0.00 sec)
+```
 
+### 1.6 delete
+```console
+mysql> insert into customers(cust_name,cust_zip) value("to_be_del",111);
+Query OK, 1 row affected (0.01 sec)
 
+mysql> select distinct cust_name,cust_zip from customers;
++----------------+----------+
+| cust_name      | cust_zip |
++----------------+----------+
+| Coyote Inc.    | 44444    |
+| Mouse House    | 43333    |
+| Wascals        | 42222    |
+| Yosemite Place | 88888    |
+| E Fudd         | 54545    |
+| wdc            | 111      |
+| tonsen         | 111      |
+| test01         | 111      |
+| to_be_del      | 111      |
++----------------+----------+
+9 rows in set (0.00 sec)
 
+mysql> delete from customers where cust_name = "to_be_del";
+Query OK, 1 row affected (0.01 sec)
 
+mysql> select distinct cust_name,cust_zip from customers;
++----------------+----------+
+| cust_name      | cust_zip |
++----------------+----------+
+| Coyote Inc.    | 44444    |
+| Mouse House    | 43333    |
+| Wascals        | 42222    |
+| Yosemite Place | 88888    |
+| E Fudd         | 54545    |
+| wdc            | 111      |
+| tonsen         | 111      |
+| test01         | 111      |
++----------------+----------+
+8 rows in set (0.00 sec)
+```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+```console
+DELETE FROM syslogs WHERE status=1 ORDER BY statusid LIMIT 10000;
+```
 
 
