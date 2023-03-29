@@ -53,8 +53,16 @@ def writeFromFileTest():
                     print(f"running: {5*counter} s")
 
 
+def readSerial():
+    com_serial = serial.Serial(port="COM1", baudrate=115200, bytesize=8, parity="N", stopbits=1)
+    while True:
+        lineBytes = com_serial.readline()
+        print(f"receive: {str(lineBytes)}")
+
+
 if __name__ == "__main__":
     # write_ANSI_ASCII_test()
     print("start ...")
-    writeFromFileTest()
+    # writeFromFileTest()
+    readSerial()
     print("end ...")
