@@ -168,4 +168,10 @@ if __name__ == '__main__':
     #     print(line.split("test_"))
     #     pts = np.array([[100, 100], [200, 20], [370, 6], [450, 200]], np.int32)
     #     dst0 = cv2.pointPolygonTest([pts], 0, 1)
-    nearLineDistance([0, 0], [1, 1], 1)
+    # nearLineDistance([0, 0], [1, 1], 1)
+    text = "1"
+    num = 1
+    num2 = 2
+    print(f"text = {type(text)}")
+    print(f"num = {type(num)}")
+    print(isinstance(num2, int))

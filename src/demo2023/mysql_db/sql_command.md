@@ -130,29 +130,19 @@ mysql> use tmp_db;
 Database changed
 mysql> source create.sql;
 Query OK, 0 rows affected (0.02 sec)
-
 Query OK, 0 rows affected (0.01 sec)
-
 Query OK, 0 rows affected (0.01 sec)
-
 Query OK, 0 rows affected (0.01 sec)
-
 Query OK, 0 rows affected (0.01 sec)
-
 Query OK, 0 rows affected (0.00 sec)
-
 Query OK, 0 rows affected (0.01 sec)
 Records: 0  Duplicates: 0  Warnings: 0
-
 Query OK, 0 rows affected (0.02 sec)
 Records: 0  Duplicates: 0  Warnings: 0
-
 Query OK, 0 rows affected (0.02 sec)
 Records: 0  Duplicates: 0  Warnings: 0
-
 Query OK, 0 rows affected (0.02 sec)
 Records: 0  Duplicates: 0  Warnings: 0
-
 ```
 
 #### 1.1.7 show create database
@@ -317,6 +307,27 @@ select prod_id,prod_price,prod_name from products order by prod_price asc limit 
 select distinct cust_zip from customers;
 select distinct cust_name,cust_zip from customers;
 ```
+获取并列倒数第一：
+```console
+mysql> select cust_id,cust_name,cust_zip from customers where cust_zip=(select MIN(cust_zip) from customers);
++---------+-----------+----------+
+| cust_id | cust_name | cust_zip |
++---------+-----------+----------+
+|   10006 | wdc       | 111      |
+|   10007 | tonsen    | 111      |
++---------+-----------+----------+
+2 rows in set (0.00 sec)
+```
+获取并列第一：
+```console
+mysql> select cust_id,cust_name,cust_zip from customers where cust_zip=(select MAX(cust_zip) from customers);
++---------+----------------+----------+
+| cust_id | cust_name      | cust_zip |
++---------+----------------+----------+
+|   10004 | Yosemite Place | 88888    |
++---------+----------------+----------+
+1 row in set (0.00 sec)
+```
 
 ### 1.4 insert 
 
@@ -407,9 +418,6 @@ mysql> select distinct cust_name,cust_zip from customers;
 DELETE FROM syslogs WHERE status=1 ORDER BY statusid LIMIT 10000;
 ```
 
-
-
-
 ### 1.7 联结
 
 #### 1.7.1 select [需要的列，可不同表] from [所有需要查询的表] [条件] [排序]
@@ -436,7 +444,7 @@ mysql> select vend_name, prod_name, prod_price from vendors, products where vend
 14 rows in set (0.01 sec)
 ```
 
-#### 1.7.2 笛卡尔积 一般是错误的返回
+#### 1.7.2 笛卡尔积 一般是错误的返回 
 ```console
 mysql> select vend_name,prod_name, prod_price from vendors,products order by vend_name,prod_name;
 +----------------+----------------+------------+
@@ -530,7 +538,7 @@ mysql> select vend_name,prod_name, prod_price from vendors,products order by ven
 84 rows in set (0.00 sec)
 ```
 
-### 1.7.3 INNER JOIN ON
+#### 1.7.3 INNER JOIN ON  内联结
 ```console
 mysql> select vend_name,prod_name,prod_price from vendors inner join products on vendors.vend_id=products.vend_id;
 +-------------+----------------+------------+
@@ -550,6 +558,58 @@ mysql> select vend_name,prod_name,prod_price from vendors inner join products on
 | ACME        | TNT (5 sticks) |      10.00 |
 | Jet Set     | JetPack 1000   |      35.00 |
 | Jet Set     | JetPack 2000   |      55.00 |
++-------------+----------------+------------+
+14 rows in set (0.00 sec)
+```
+
+#### 1.7.4 left join on
+左边内容全列出来，右边没有对应,则为NULL
+```console
+mysql> select vend_name,prod_name,prod_price from vendors left join products on vendors.vend_id=products.vend_id;
++----------------+----------------+------------+
+| vend_name      | prod_name      | prod_price |
++----------------+----------------+------------+
+| Anvils R Us    | .5 ton anvil   |       5.99 |
+| Anvils R Us    | 1 ton anvil    |       9.99 |
+| Anvils R Us    | 2 ton anvil    |      14.99 |
+| LT Supplies    | Fuses          |       3.42 |
+| LT Supplies    | Oil can        |       8.99 |
+| ACME           | Detonator      |      13.00 |
+| ACME           | Bird seed      |      10.00 |
+| ACME           | Carrots        |       2.50 |
+| ACME           | Safe           |      50.00 |
+| ACME           | Sling          |       4.49 |
+| ACME           | TNT (1 stick)  |       2.50 |
+| ACME           | TNT (5 sticks) |      10.00 |
+| Furball Inc.   | NULL           |       NULL |
+| Jet Set        | JetPack 1000   |      35.00 |
+| Jet Set        | JetPack 2000   |      55.00 |
+| Jouets Et Ours | NULL           |       NULL |
++----------------+----------------+------------+
+16 rows in set (0.00 sec)
+```
+
+#### 1.7.5 right join on
+右边内容全列出来，左边没有对应,则为NULL
+```console
+mysql> select vend_name,prod_name,prod_price from vendors right join products on vendors.vend_id=products.vend_id;
++-------------+----------------+------------+
+| vend_name   | prod_name      | prod_price |
++-------------+----------------+------------+
+| Anvils R Us | .5 ton anvil   |       5.99 |
+| Anvils R Us | 1 ton anvil    |       9.99 |
+| Anvils R Us | 2 ton anvil    |      14.99 |
+| ACME        | Detonator      |      13.00 |
+| ACME        | Bird seed      |      10.00 |
+| ACME        | Carrots        |       2.50 |
+| LT Supplies | Fuses          |       3.42 |
+| Jet Set     | JetPack 1000   |      35.00 |
+| Jet Set     | JetPack 2000   |      55.00 |
+| LT Supplies | Oil can        |       8.99 |
+| ACME        | Safe           |      50.00 |
+| ACME        | Sling          |       4.49 |
+| ACME        | TNT (1 stick)  |       2.50 |
+| ACME        | TNT (5 sticks) |      10.00 |
 +-------------+----------------+------------+
 14 rows in set (0.00 sec)
 ```

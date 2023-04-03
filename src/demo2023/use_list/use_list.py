@@ -5,8 +5,8 @@
 @File : use_list.py
 @Desc : 
 """
-a = [1,2,3]
-b = [4,5,6]
+a = [1, 2, 3]
+b = [4, 5, 6]
 
 for i in b[:1]:
     print(i)

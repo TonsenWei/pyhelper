@@ -13,6 +13,11 @@ python测试学习, 主要刷面试题，算法题等
 - 2022-02-10_14:01:13 增加word批量转pdf，examples/word2pdf
 
 
+## demo2023 文件夹
+- adb curl
+- mysql learning
+- usb_relay
+- use_list
 
 ## tests文件夹
 - 2021-12-16 21:31:11 增加common、config、testFiles目录对测试工程进行管理。
